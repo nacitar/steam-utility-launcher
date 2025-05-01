@@ -1,0 +1,42 @@
+[project]
+name = "steam_proton_utility_launcher"
+version = "0.1.0"
+description = "Launches utilities in the same proton prefix as a given game, allowing trainers and practice tools to function."
+authors = [
+    {name = "Jacob McIntosh",email = "nacitar.sevaht@gmail.com"}
+]
+readme = "README.md"
+license = "Unlicense"
+requires-python = ">=3.11"
+dependencies = [
+    "vdf (>=3.4,<4.0)"
+]
+
+[tool.poetry]
+packages = [{include = "steam_proton_utility_launcher", from = "src"}]
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+flake8 = "^7.1.2"
+isort = "^6.0.1"
+mypy = "^1.15.0"
+pytest = "^8.3.5"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 79
+skip-magic-trailing-comma = true
+
+[tool.isort]
+line_length = 79
+profile = "black"
+
+[tool.mypy]
+strict = true
+
+[tool.poetry.scripts]
+app = "steam_proton_utility_launcher.__main__:main"
+checks = "steam_proton_utility_launcher.devtools.checks:main"
