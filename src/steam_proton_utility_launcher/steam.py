@@ -19,6 +19,27 @@ VDFTree = Mapping[str, Union[str, "VDFTree"]]
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class Process:
+    command_line: list[str]
+    env: dict[str, str] | None = None
+    cwd: Path | None = None
+
+    def __post_init__(self) -> None:
+        if not self.command_line:
+            raise AssertionError("command_line must be a non-empty list.")
+
+    def start(self) -> subprocess.Popen[bytes]:
+        command_line = list(self.command_line)
+        logger.info(f"Starting subprocess: {command_line}")
+        return subprocess.Popen(
+            command_line,
+            creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
+            cwd=self.cwd,
+            env=self.env,
+        )
+
+
 class Verb(StrEnum):
     RUN = "run"
     WAIT_FOR_EXIT_AND_RUN = "waitforexitandrun"
@@ -252,41 +273,57 @@ class Steam:
     def game_wine_prefix(self, *, game_id: str) -> Path:
         return self.game_compatdata_path(game_id=game_id) / "pfx"
 
-    def run_in_prefix(self, command_line: list[str], *, game_id: str) -> None:
+    def process_in_prefix(
+        self,
+        command_line: list[str],
+        *,
+        game_id: str,
+        cwd: Path | None = None,
+        system_wine: bool = False,
+    ) -> Process:
         env = os.environ.copy()
-        tool_name = self.game_compatibility_tool(game_id)
-        if tool_name:
-            matched_tools = [
-                tool
-                for tool in self.compatibility_tools
-                if tool.internal_name == tool_name
-            ]
-            if not matched_tools:
-                raise RuntimeError(
-                    f"No compatibility tools matched for: {tool_name}"
-                )
-            if len(matched_tools) > 1:
-                raise RuntimeError(
-                    f"Multiple compatibility tools matched for: {tool_name}"
-                )
-            tool = matched_tools[0]
-            if tool.is_proton():
-                env.update(
-                    {
-                        "STEAM_COMPAT_CLIENT_INSTALL_PATH": str(
-                            self.location.root
-                        ),
-                        "PROTON_DIR": str(tool.binary_path.parent),
-                        "WINEPREFIX": str(
-                            self.game_wine_prefix(game_id=game_id)
-                        ),
-                        "STEAM_COMPAT_DATA_PATH": str(
-                            self.game_compatdata_path(game_id=game_id)
-                        ),
-                    }
-                )
-            command_line = tool.command_line(verb=Verb.RUN) + command_line
-            logger.info(f"Running in prefix: {command_line}")
+        is_wine = False
+        if system_wine:
+            is_wine = True
+            command_line = ["wine"] + command_line
         else:
-            logger.warning(f"Running directly (no prefix): {command_line}")
-        subprocess.run(command_line, check=True, env=env)
+            tool_name = self.game_compatibility_tool(game_id)
+            if tool_name:
+                matched_tools = [
+                    tool
+                    for tool in self.compatibility_tools
+                    if tool.internal_name == tool_name
+                ]
+                if not matched_tools:
+                    raise RuntimeError(
+                        f"No compatibility tools matched: {tool_name}"
+                    )
+                if len(matched_tools) > 1:
+                    raise RuntimeError(
+                        f"Multiple compatibility tools matched: {tool_name}"
+                    )
+                tool = matched_tools[0]
+                if tool.is_proton():
+                    is_wine = True
+                    command_line = (
+                        tool.command_line(verb=Verb.RUN) + command_line
+                    )
+                    env.update({"PROTON_DIR": str(tool.binary_path.parent)})
+        if is_wine:
+            env.update(
+                {
+                    "STEAM_COMPAT_CLIENT_INSTALL_PATH": str(
+                        self.location.root
+                    ),
+                    "WINEPREFIX": str(self.game_wine_prefix(game_id=game_id)),
+                    "STEAM_COMPAT_DATA_PATH": str(
+                        self.game_compatdata_path(game_id=game_id)
+                    ),
+                }
+            )
+            logger.info(f"Process will run in prefix: {command_line}")
+        else:
+            logger.warning(
+                f"Process will run directly (no prefix): {command_line}"
+            )
+        return Process(command_line=command_line, env=env, cwd=cwd)

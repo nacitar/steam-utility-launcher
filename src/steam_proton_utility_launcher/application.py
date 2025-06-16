@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 from dataclasses import KW_ONLY, dataclass
 from logging import Handler
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Sequence
 
+from . import dsr_gadget, hitman_peacock
 from .steam import Steam
 
 logger = logging.getLogger(__name__)
@@ -108,7 +110,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         const=logging.DEBUG,
         help="Maximizes console log verbosity to DEBUG.  Overrides -v and -q.",
     )
-    parser.add_argument(
+    subparsers = parser.add_subparsers(dest="mode", required=True)
+    manual_parser = subparsers.add_parser(
+        "manual", help="Run with a manual invocation."
+    )
+    manual_parser.add_argument(
         "-g",
         "--game-id",
         help=(
@@ -117,14 +123,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
         required=True,
     )
-    parser.add_argument(
+    manual_parser.add_argument(
         "command_line",
         nargs=argparse.REMAINDER,
         help="The command line of the binary to execute.",
     )
+    subparsers.add_parser(
+        "hitman-peacock", help="Run Hitman's Peacock private server."
+    )
+    subparsers.add_parser(
+        "dsr-gadget", help="Run the Dark Souls: Remastered gadget."
+    )
     args = parser.parse_args(args=argv)
-    if not args.command_line:
-        parser.error("You must specify a command to run.")
     configure_logging(
         console_level=args.console_level or logging.WARNING,
         log_file_options=(
@@ -138,6 +148,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         ),
     )
-    steam = Steam.from_detection()
-    steam.run_in_prefix(args.command_line, game_id=args.game_id)
+    steam: Steam | None = None
+    if args.mode == "manual":
+        if not args.command_line:
+            parser.error("You must specify a command to run.")
+        steam = Steam.from_detection()
+        steam.process_in_prefix(
+            args.command_line, game_id=args.game_id
+        ).start()
+    elif args.mode == "hitman-peacock":
+        if sys.platform == "linux":
+            steam = Steam.from_detection()
+
+        return hitman_peacock.launch(steam=steam)
+    elif args.mode == "dsr-gadget":
+        if sys.platform == "linux":
+            steam = Steam.from_detection()
+
+        return dsr_gadget.launch(steam=steam)
+
+    else:
+        raise NotImplementedError()
     return 0
