@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -76,23 +77,63 @@ class VDFNode:
             return default
 
 
+_PROTON_PATTERN = re.compile(r"^Proton($|[- _])", re.IGNORECASE)
+
+
 @dataclass
 class CompatibilityTool:
     internal_name: str
-    tool_vdf: Path
     manifest_vdf: Path
     install_path: Path
     display_name: str
-    from_oslist: set[str]
-    to_oslist: set[str]
     binary_path: Path
     binary_argument_template: list[str]
 
     def is_proton(self) -> bool:
-        return "windows" in self.from_oslist and "linux" in self.to_oslist
+        return _PROTON_PATTERN.match(self.internal_name) is not None
 
     @classmethod
-    def from_vdf(cls, tool_vdf: Path) -> list[CompatibilityTool]:
+    def from_toolmanifest_vdf(
+        cls,
+        manifest_vdf: Path,
+        internal_name: str = "",
+        display_name: str = "",
+    ) -> CompatibilityTool:
+        install_path = manifest_vdf.parent
+        if not internal_name:
+            internal_name = install_path.name.lower().replace(" ", "_")
+        if not display_name:
+            display_name = internal_name
+        manifest = VDFNode.from_path(manifest_vdf).section("manifest")
+        manifest_version = manifest["version"]
+        if manifest_version != "2":
+            raise NotImplementedError(
+                f"Only supports manifest v2, but found v{manifest_version}"
+            )
+        command_line_template = shlex.split(manifest["commandline"])
+        if not command_line_template:
+            raise ValueError("Couldn't retrieve command line!")
+        binary = command_line_template[0]
+        if binary.startswith("/"):
+            binary = str(install_path / binary[1:])
+        else:
+            which_path = shutil.which(binary)
+            if not which_path:
+                raise ValueError(f"Couldn't find binary in PATH: {binary}")
+            binary = which_path
+        return CompatibilityTool(
+            internal_name=internal_name,
+            install_path=install_path,
+            manifest_vdf=manifest_vdf,
+            display_name=display_name,
+            binary_path=Path(binary),
+            binary_argument_template=command_line_template[1:],
+        )
+
+    @classmethod
+    def from_compatibilitytool_vdf(
+        cls, tool_vdf: Path
+    ) -> list[CompatibilityTool]:
         tools: list[CompatibilityTool] = []
         compat_tools = VDFNode.from_path(tool_vdf).section(
             ["compatibilitytools", "compat_tools"]
@@ -102,45 +143,11 @@ class CompatibilityTool:
             tool_section = compat_tools.section(internal_name)
             install_path = vdf_dir / tool_section["install_path"]
             manifest_vdf = install_path / "toolmanifest.vdf"
-
-            manifest = VDFNode.from_path(manifest_vdf).section("manifest")
-            manifest_version = manifest["version"]
-            if manifest_version != "2":
-                raise NotImplementedError(
-                    f"Only supports manifest v2, but found v{manifest_version}"
-                )
-            command_line_template = shlex.split(manifest["commandline"])
-            if not command_line_template:
-                raise ValueError("Couldn't retrieve command line!")
-            binary = command_line_template[0]
-            if binary.startswith("/"):
-                binary = str(install_path / binary[1:])
-            else:
-                which_path = shutil.which(binary)
-                if not which_path:
-                    raise ValueError(f"Couldn't find binary in PATH: {binary}")
-                binary = which_path
             tools.append(
-                CompatibilityTool(
+                cls.from_toolmanifest_vdf(
+                    manifest_vdf,
                     internal_name=internal_name,
-                    tool_vdf=tool_vdf,
-                    install_path=install_path,
-                    manifest_vdf=manifest_vdf,
                     display_name=tool_section.get("display_name"),
-                    from_oslist=set(
-                        os_name
-                        for os_name in tool_section.get("from_oslist").split(
-                            " "
-                        )
-                        if os_name
-                    ),
-                    to_oslist=set(
-                        os_name
-                        for os_name in tool_section.get("to_oslist").split(" ")
-                        if os_name
-                    ),
-                    binary_path=Path(binary),
-                    binary_argument_template=command_line_template[1:],
                 )
             )
         return tools
@@ -182,6 +189,10 @@ class SteamLocation:
         return [self.root] + self.system_config_dirs
 
     @property
+    def steamapps(self) -> Path:
+        return self.root / "steamapps"
+
+    @property
     def config_vdf(self) -> Path:
         return self.root / "config" / "config.vdf"
 
@@ -194,12 +205,21 @@ class Steam:
     @classmethod
     def from_location(cls, location: SteamLocation) -> Steam:
         compatibility_tools: list[CompatibilityTool] = []
+        for manifest_vdf in (location.steamapps / "common").glob(
+            "*/toolmanifest.vdf"
+        ):
+            compatibility_tools.append(
+                CompatibilityTool.from_toolmanifest_vdf(manifest_vdf)
+            )
+
         for dir in location.config_dirs:
             for vdf_path in dir.glob(
                 "compatibilitytools.d/*/compatibilitytool.vdf"
             ):
                 try:
-                    tools = CompatibilityTool.from_vdf(vdf_path)
+                    tools = CompatibilityTool.from_compatibilitytool_vdf(
+                        vdf_path
+                    )
                 except Exception:
                     logger.warn(
                         f"Exception when loading {vdf_path}:", exc_info=True
