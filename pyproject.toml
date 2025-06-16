@@ -1,5 +1,5 @@
 [project]
-name = "steam_proton_utility_launcher"
+name = "steam_utility_launcher"
 version = "0.1.0"
 description = "Launches utilities in the same proton prefix as a given game, allowing trainers and practice tools to function."
 authors = [
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "steam_proton_utility_launcher", from = "src"}]
+packages = [{include = "steam_utility_launcher", from = "src"}]
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
@@ -38,5 +38,5 @@ profile = "black"
 strict = true
 
 [tool.poetry.scripts]
-app = "steam_proton_utility_launcher.__main__:main"
-checks = "steam_proton_utility_launcher.devtools.checks:main"
+app = "steam_utility_launcher.__main__:main"
+checks = "steam_utility_launcher.devtools.checks:main"

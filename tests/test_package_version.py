@@ -1,4 +1,4 @@
-from steam_proton_utility_launcher import __version__
+from steam_utility_launcher import __version__
 
 
 def test_version_defined() -> None:
