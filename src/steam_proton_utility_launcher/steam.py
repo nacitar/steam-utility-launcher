@@ -124,7 +124,7 @@ class CompatibilityTool:
         if not internal_name:
             internal_name = install_path.name.lower().replace(" ", "_")
         if not display_name:
-            display_name = internal_name
+            display_name = install_path.name
         manifest = VDFNode.from_path(manifest_vdf).section("manifest")
         manifest_version = manifest["version"]
         if manifest_version != "2":
