@@ -114,14 +114,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     manual_parser = subparsers.add_parser(
         "manual", help="Run with a manual invocation."
     )
-    manual_parser.add_argument(
+    manual_game_id_group = manual_parser.add_mutually_exclusive_group(
+        required=True
+    )
+    manual_game_id_group.add_argument(
+        "-a",
+        "--auto",
+        action="store_true",
+        help="Automatically detect the game presently running in proton.",
+    )
+    manual_game_id_group.add_argument(
         "-g",
         "--game-id",
         help=(
             "The steam appid of the game.  Present in the store page URL."
             "  Dark Souls Remastered is 570940, for example."
         ),
-        required=True,
     )
     manual_parser.add_argument(
         "command_line",
@@ -153,9 +161,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not args.command_line:
             parser.error("You must specify a command to run.")
         steam = Steam.from_detection()
-        steam.process_in_prefix(
-            args.command_line, game_id=args.game_id
-        ).start()
+
+        if args.auto:
+            game_id = Steam.running_proton_game_id()
+            if not game_id:
+                raise RuntimeError(
+                    "Could not detect a game running in proton."
+                )
+        else:
+            game_id = args.game_id
+        steam.process_in_prefix(args.command_line, game_id=game_id).start()
     elif args.mode == "hitman-peacock":
         if sys.platform == "linux":
             steam = Steam.from_detection()

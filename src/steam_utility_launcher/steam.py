@@ -224,6 +224,26 @@ class Steam:
     compatibility_tools: list[CompatibilityTool]
 
     @classmethod
+    def running_proton_game_id(cls) -> str | None:
+        APP_ID_VAR_PREFIX = b"SteamAppId="
+        for pid_dir in Path("/proc").iterdir():
+            if not pid_dir.name.isdigit():
+                continue
+            try:
+                executable = (pid_dir / "exe").resolve()
+                if executable.name == "wineserver":
+                    for line in (
+                        (pid_dir / "environ").read_bytes().split(b"\0")
+                    ):
+                        if line.startswith(APP_ID_VAR_PREFIX):
+                            return line[len(APP_ID_VAR_PREFIX) :].decode(
+                                "utf-8"
+                            )
+            except (FileNotFoundError, PermissionError, OSError):
+                continue
+        return None
+
+    @classmethod
     def from_location(cls, location: SteamLocation) -> Steam:
         compatibility_tools: list[CompatibilityTool] = []
         for manifest_vdf in (location.steamapps / "common").glob(

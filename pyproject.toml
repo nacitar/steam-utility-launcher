@@ -16,11 +16,11 @@ dependencies = [
 packages = [{include = "steam_utility_launcher", from = "src"}]
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
-flake8 = "^7.1.2"
-isort = "^6.0.1"
-mypy = "^1.15.0"
-pytest = "^8.3.5"
+black = "^25.11.0"
+flake8 = "^7.3.0"
+isort = "^6.1.0"
+mypy = "^1.19.0"
+pytest = "^8.4.2"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -38,5 +38,7 @@ profile = "black"
 strict = true
 
 [tool.poetry.scripts]
-app = "steam_utility_launcher.__main__:main"
-checks = "steam_utility_launcher.devtools.checks:main"
+steam-utility-launcher = "steam_utility_launcher.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
