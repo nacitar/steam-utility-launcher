@@ -301,6 +301,12 @@ class Steam:
         cwd: Path | None = None,
         system_wine: bool = False,
     ) -> Process:
+        if not command_line:
+            raise RuntimeError("No command line provided.")
+        if not shutil.which(command_line[0]):
+            raise ValueError(
+                f"Couldn't find utility in PATH: {command_line[0]}"
+            )
         env = os.environ.copy()
         is_wine = False
         if system_wine:
