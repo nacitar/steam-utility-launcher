@@ -191,7 +191,7 @@ class SteamLocation:
 
     @classmethod
     def from_detection(cls) -> SteamLocation:
-        if sys.platform.startswith("linux"):
+        if not sys.platform.startswith("linux"):
             raise NotImplementedError("currently only implemented for linux")
         XDG_DATA_HOME = Path(
             os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
