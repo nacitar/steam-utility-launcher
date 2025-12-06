@@ -77,7 +77,11 @@ def configure_logging(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Does something.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Starts applications inside the Proton prefix of a Steam game."
+        )
+    )
     log_group = parser.add_argument_group("logging")
     log_group.add_argument(
         "--log-file",
@@ -142,6 +146,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     subparsers.add_parser(
         "dsr-gadget", help="Run the Dark Souls: Remastered gadget."
     )
+
     args = parser.parse_args(args=argv)
     configure_logging(
         console_level=args.console_level or logging.WARNING,

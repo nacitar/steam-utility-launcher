@@ -1,5 +1,5 @@
 [project]
-name = "steam_utility_launcher"
+name = "steam-utility-launcher"
 version = "0.1.0"
 description = "Launches utilities in the same proton prefix as a given game, allowing trainers and practice tools to function."
 authors = [

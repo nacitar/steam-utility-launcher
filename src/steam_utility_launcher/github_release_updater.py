@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import stat
 import subprocess
 import urllib.request
 from dataclasses import KW_ONLY, dataclass, field
 from enum import Enum, auto, unique
+from importlib.metadata import distribution
 from itertools import chain
 from os import sep
 from os.path import commonpath, dirname, normpath, pardir
@@ -319,6 +321,12 @@ class Asset:
             )
 
 
+XDG_DATA_BASE = (
+    Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    / distribution(__package__.split(".")[0]).metadata["Name"]
+)
+
+
 @dataclass(kw_only=True)
 class ApplicationUpdater:
     name: str
@@ -329,10 +337,8 @@ class ApplicationUpdater:
     TAG_FILE_NAME: ClassVar[str] = ".github_release_tag"
 
     @property
-    def default_install_directory(self) -> Path:
-        return (
-            Path(__file__).parent.parent.parent / "apps" / self.name
-        ).resolve()
+    def install_directory(self) -> Path:
+        return XDG_DATA_BASE / self.name
 
     def __post_init__(self) -> None:
         for path in self.preserved_paths:
@@ -367,7 +373,7 @@ class ApplicationUpdater:
         staging_directory: Path | None = None,
     ) -> dict[Path, Metadata]:
         install_directory = (
-            install_directory or self.default_install_directory
+            install_directory or self.install_directory
         ).resolve()
         if staging_directory:
             staging_directory = staging_directory.resolve()
