@@ -24,12 +24,20 @@ class Process:
     command_line: list[str]
     env: dict[str, str] | None = None
     cwd: Path | None = None
+    utility_binary_name: str | None = None
 
     def __post_init__(self) -> None:
         if not self.command_line:
             raise AssertionError("command_line must be a non-empty list.")
 
     def start(self) -> subprocess.Popen[bytes]:
+        if self.utility_binary_name is not None and shutil.which(
+            self.utility_binary_name
+        ):
+            raise ValueError(
+                f"Couldn't find utility in PATH: {self.utility_binary_name}"
+            )
+
         command_line = list(self.command_line)
         logger.info(f"Starting subprocess: {command_line}")
         return subprocess.Popen(
@@ -303,10 +311,7 @@ class Steam:
     ) -> Process:
         if not command_line:
             raise RuntimeError("No command line provided.")
-        if not shutil.which(command_line[0]):
-            raise ValueError(
-                f"Couldn't find utility in PATH: {command_line[0]}"
-            )
+        utility_binary_name = command_line[0]
         env = os.environ.copy()
         is_wine = False
         if system_wine:
@@ -352,4 +357,9 @@ class Steam:
             logger.warning(
                 f"Process will run directly (no prefix): {command_line}"
             )
-        return Process(command_line=command_line, env=env, cwd=cwd)
+        return Process(
+            utility_binary_name=utility_binary_name,
+            command_line=command_line,
+            env=env,
+            cwd=cwd,
+        )

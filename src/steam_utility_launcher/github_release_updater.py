@@ -321,7 +321,7 @@ class Asset:
             )
 
 
-XDG_DATA_BASE = (
+XDG_DATA_ROOT = (
     Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
     / distribution(__package__.split(".")[0]).metadata["Name"]
 )
@@ -338,7 +338,7 @@ class ApplicationUpdater:
 
     @property
     def default_install_directory(self) -> Path:
-        return XDG_DATA_BASE / self.name
+        return XDG_DATA_ROOT / self.name
 
     def __post_init__(self) -> None:
         for path in self.preserved_paths:
@@ -373,7 +373,7 @@ class ApplicationUpdater:
         staging_directory: Path | None = None,
     ) -> dict[Path, Metadata]:
         install_directory = (
-            install_directory or self.default_install_dircetory
+            install_directory or self.default_install_directory
         ).resolve()
         if staging_directory:
             staging_directory = staging_directory.resolve()
