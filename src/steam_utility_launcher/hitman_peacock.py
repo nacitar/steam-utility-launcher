@@ -20,11 +20,8 @@ def launch(*, steam: Steam | None = None) -> int:
     domain = f"127.0.0.1:{env["PORT"]}"
     patcher_args = ["--headless", "--domain", domain]
 
-    is_linux = sys.platform == "linux"
-    if is_linux:
-        suffix = "-linux"
-    else:
-        suffix = ""
+    is_linux = sys.platform.startswith("linux")
+    suffix = "-linux" if is_linux else ""
 
     updater = ApplicationUpdater(
         name="Peacock",
@@ -53,15 +50,13 @@ def launch(*, steam: Steam | None = None) -> int:
             raise AssertionError("steam context must be provided on linux!")
         processes: list[Process] = []
         game_id = "1659040"
-        processes.append(
+        processes += [
             steam.process_in_prefix(
-                [str(install_directory / "PeacockPatcher.exe")] + patcher_args,
+                [str(install_directory / "PeacockPatcher.exe"), *patcher_args],
                 game_id=game_id,
-            )
-        )
-        processes.append(
-            Process(["node", "chunk0.js"], env=env, cwd=install_directory)
-        )
+            ),
+            Process(["node", "chunk0.js"], env=env, cwd=install_directory),
+        ]
         wait = True
     else:
         processes = [

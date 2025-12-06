@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
-import platform
 import re
 import shlex
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -191,7 +191,7 @@ class SteamLocation:
 
     @classmethod
     def from_detection(cls) -> SteamLocation:
-        if platform.system() != "Linux":
+        if sys.platform.startswith("linux"):
             raise NotImplementedError("currently only implemented for linux")
         XDG_DATA_HOME = Path(
             os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
