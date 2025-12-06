@@ -26,7 +26,7 @@ def launch(*, steam: Steam | None = None) -> int:
         ],
         preserved_paths=set(),
     )
-    gadget_path = [str(updater.install_directory / "DSR-Gadget.exe")]
+    gadget_path = [str(updater.default_install_directory / "DSR-Gadget.exe")]
     if sys.platform.startswith("linux"):
         if not steam:
             raise AssertionError("steam context must be provided on linux!")

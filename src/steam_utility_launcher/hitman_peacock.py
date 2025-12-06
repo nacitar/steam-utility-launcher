@@ -43,7 +43,7 @@ def launch(*, steam: Steam | None = None) -> int:
         },
     )
 
-    install_directory = updater.install_directory
+    install_directory = updater.default_install_directory
 
     if is_linux:
         if not steam:

@@ -337,7 +337,7 @@ class ApplicationUpdater:
     TAG_FILE_NAME: ClassVar[str] = ".github_release_tag"
 
     @property
-    def install_directory(self) -> Path:
+    def default_install_directory(self) -> Path:
         return XDG_DATA_BASE / self.name
 
     def __post_init__(self) -> None:
@@ -373,7 +373,7 @@ class ApplicationUpdater:
         staging_directory: Path | None = None,
     ) -> dict[Path, Metadata]:
         install_directory = (
-            install_directory or self.install_directory
+            install_directory or self.default_install_dircetory
         ).resolve()
         if staging_directory:
             staging_directory = staging_directory.resolve()
